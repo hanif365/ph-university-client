@@ -1,9 +1,11 @@
 import { Button } from "antd";
 import { useLoginMutation } from "../redux/features/auth/authApi";
-import { useForm } from "react-hook-form";
+import { useForm, FieldValues } from "react-hook-form";
 import { useAppDispatch } from "../redux/hooks";
-import { setUser } from "../redux/features/auth/authSlice";
+import { setUser, TUser } from "../redux/features/auth/authSlice";
 import { verifyToken } from "../utils/verifyToken";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const defaultUserInfo = {
   id: "A-0002",
@@ -11,25 +13,35 @@ const defaultUserInfo = {
 };
 
 const Login = () => {
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { register, handleSubmit } = useForm({
     defaultValues: defaultUserInfo,
   });
-  const [login, { isLoading, error }] = useLoginMutation();
+  const [login, { isLoading }] = useLoginMutation();
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: FieldValues) => {
     // console.log("data", data);
-    const userInfo = {
-      id: data.id,
-      password: data.password,
-    };
-    console.log("userInfo", userInfo);
+    const toastId = toast.loading("Logging in...");
 
-    const result = await login(userInfo).unwrap();
-    console.log("result", result);
-    const user = verifyToken(result?.data?.accessToken);
-    console.log("user", user);
-    dispatch(setUser({ user, token: result?.data?.accessToken }));
+    try {
+      const userInfo = {
+        id: data.id,
+        password: data.password,
+      };
+      console.log("userInfo", userInfo);
+
+      const result = await login(userInfo).unwrap();
+      console.log("result", result);
+      const user = verifyToken(result?.data?.accessToken) as TUser;
+      console.log("user", user);
+      dispatch(setUser({ user, token: result?.data?.accessToken }));
+      toast.success("Logged in successfully", { id: toastId, duration: 2000 });
+      navigate(`/${user?.role}/dashboard`);
+    } catch (err) {
+      console.log("err when login", err);
+      toast.error("Something went wrong", { id: toastId, duration: 2000 });
+    }
   };
   // console.log(data, error);
 
